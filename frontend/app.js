@@ -169,6 +169,57 @@ const contractABI = [
 ];
 
 // ---------- CONNECT TO CONTRACT ----------
+const ETHERS_CDN_URLS = [
+  "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js",
+];
+
+let ethersLoadPromise;
+
+function loadEthersFromCdn(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () =>
+      window.ethers
+        ? resolve(window.ethers)
+        : reject(new Error(`ethers.js failed to initialize from ${src}`));
+    script.onerror = () => reject(new Error(`ethers.js failed to load from ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureEthersLoaded() {
+  if (window.ethers) return window.ethers;
+
+  if (!ethersLoadPromise) {
+    ethersLoadPromise = (async () => {
+      let lastError;
+
+      for (const url of ETHERS_CDN_URLS) {
+        try {
+          return await loadEthersFromCdn(url);
+        } catch (err) {
+          console.error(`Failed to load ethers.js from ${url}`, err);
+          lastError = err;
+        }
+      }
+
+      throw lastError || new Error("ethers.js failed to load from all sources");
+    })();
+  }
+
+  try {
+    return await ethersLoadPromise;
+  } catch (err) {
+    // Allow retry on subsequent attempts.
+    ethersLoadPromise = null;
+    throw err;
+  }
+}
+
+
 async function getContract() {
   if (!window.ethereum) {
     alert("❌ MetaMask not detected. Please install it to use this DApp.");
@@ -177,8 +228,18 @@ async function getContract() {
 
   await window.ethereum.request({ method: "eth_requestAccounts" });
 
+  // Ensure ethers.js is available from the CDN script or load it lazily.
+  const ethersLib = await ensureEthersLoaded().catch((err) => {
+    console.error("ethers load error", err);
+    alert("❌ Ethers.js failed to load. Please check your connection and refresh the page.");
+    return null;
+  });
+  if (!ethersLib) {
+    throw new Error("ethers.js not available on window");
+  }
+
   // ethers v5 syntax:
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const provider = new ethersLib.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
 
   // Optional: verify correct network (Hardhat localhost)
@@ -187,7 +248,7 @@ async function getContract() {
     alert("⚠️ Please switch MetaMask to the Hardhat network (chainId 31337)");
   }
 
-  return new ethers.Contract(contractAddress, contractABI, signer);
+  return new ethersLib.Contract(contractAddress, contractABI, signer);
 }
 
 // ---------- CREATE PRODUCT ----------
