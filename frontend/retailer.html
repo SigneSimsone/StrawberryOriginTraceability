@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Retailer Dashboard - Strawberry Traceability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">🍓 Retailer Dashboard</h1>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-info text-dark fs-6">Retailer</span>
+        <span id="retailerUsername" class="text-muted"></span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Update Delivery and Store Placement Card -->
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">Update Delivery and Store Placement</h5>
+        <p class="text-muted mb-4">Record product arrival and store placement</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="retailerPid" class="form-label">Product ID</label>
+            <input id="retailerPid" class="form-control" placeholder="Enter Product ID" required>
+          </div>
+          <div class="col-md-6">
+            <label for="retailerParticipant" class="form-label">Store Name</label>
+            <input id="retailerParticipant" class="form-control" placeholder="e.g., Maxima Riga Center" required>
+          </div>
+          <div class="col-md-6">
+            <label for="retailerEvent" class="form-label">Event Type</label>
+            <select id="retailerEvent" class="form-select" required>
+              <option value="">Select event type</option>
+              <option value="Delivered">Delivered to store</option>
+              <option value="Store Placement">Placed on store shelves</option>
+              <option value="Quality Check">Quality check</option>
+              <option value="Available for Sale">Available for sale</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="retailerDate" class="form-label">Date</label>
+            <input id="retailerDate" type="date" class="form-control" required>
+          </div>
+        </div>
+        <button class="btn btn-success btn-lg w-100 mt-4" onclick="updateRetailerProduct()">Update Product</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Session guard
+    window.addEventListener('DOMContentLoaded', () => {
+      const session = getCurrentUser();
+      if (!session) {
+        window.location.href = '/portal.html';
+        return;
+      }
+      if (session.role !== 'Retailer') {
+        alert('Access denied. This page is for retailers only.');
+        window.location.href = '/portal.html';
+        return;
+      }
+      document.getElementById('retailerUsername').textContent = session.username;
+
+      // Set today's date
+      document.getElementById('retailerDate').value = new Date().toISOString().split('T')[0];
+    });
+  </script>
+</body>
+</html>

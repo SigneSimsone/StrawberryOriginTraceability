@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Supply Chain Portal - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <!-- Header -->
+  <nav class="navbar navbar-light bg-white shadow-sm">
+    <div class="container">
+      <span class="navbar-brand mb-0 h1">🍓 Supply Chain Portal</span>
+      <a href="/" class="btn btn-outline-secondary btn-sm">← Consumer View</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <!-- Login Card -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-4">Login</h5>
+            <form id="loginForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <input id="loginUsername" class="form-control" placeholder="Username" required>
+                </div>
+                <div class="col-md-6">
+                  <input id="loginPassword" type="password" class="form-control" placeholder="Password" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary w-100 mt-3">Login</button>
+              <div id="loginStatus" class="mt-2 small"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Signup Card -->
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-4">Create an Account</h5>
+            <div id="firstUserNotice" class="alert alert-info mb-3" style="display:none;">
+              <strong>Welcome!</strong> You are the first user. You will automatically become an Administrator.
+            </div>
+            <form id="signupForm">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <input id="signupUsername" class="form-control" placeholder="Username" required>
+                </div>
+                <div class="col-md-4">
+                  <input id="signupPassword" type="password" class="form-control" placeholder="Password (min 4 chars)" required minlength="4">
+                </div>
+                <div class="col-md-4">
+                  <select id="signupRole" class="form-select" required>
+                    <option value="">Choose a role</option>
+                    <option value="Farmer">Farmer</option>
+                    <option value="WarehouseWorker">Warehouse Worker</option>
+                    <option value="Retailer">Retailer</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-success w-100 mt-3">Sign Up</button>
+              <div id="signupStatus" class="mt-2 small"></div>
+            </form>
+            <p class="small text-muted mb-0 mt-3">
+              <strong>Note:</strong> New accounts require admin approval before login.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -2,171 +2,114 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Strawberry Origin Traceability</title>
+  <title>Verify Your Strawberries - Origin Traceability</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light p-4">
-  <div class="container">
-    <h1 class="text-center mb-4">🍓 Strawberry Origin Traceability</h1>
-
-    <div id="loginSection" class="card p-3 mb-4">
-      <h5>Login</h5>
-      <form id="loginForm" class="row g-2">
-        <div class="col-md-5">
-          <input id="loginUsername" class="form-control" placeholder="Username" required>
-        </div>
-        <div class="col-md-5">
-          <input id="loginPassword" type="password" class="form-control" placeholder="Password" required>
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-primary w-100">Login</button>
-        </div>
-      </form>
-      <div id="loginStatus" class="mt-2 small"></div>
+<body class="bg-light">
+  <!-- Header -->
+  <nav class="navbar navbar-light bg-white shadow-sm">
+    <div class="container">
+      <span class="navbar-brand mb-0 h1">🍓 Strawberry Origin Traceability</span>
+      <a href="portal.html" class="btn btn-outline-primary btn-sm">Supply Chain Portal →</a>
     </div>
+  </nav>
 
-     <div id="signupSection" class="card p-3 mb-4">
-      <h5>Create an Account</h5>
-      <div id="firstUserNotice" class="alert alert-info mb-3" style="display:none;">
-        <strong>Welcome!</strong> You are the first user. You will automatically become an Administrator.
-      </div>
-      <form id="signupForm" class="row g-2">
-        <div class="col-md-3">
-          <input id="signupUsername" class="form-control" placeholder="Username" required>
+  <!-- Main Content -->
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-5">
+          <h1 class="display-4 mb-3">Verify Your Strawberries</h1>
+          <p class="lead text-muted">
+            Enter the product ID from your package to see the complete journey of your strawberries from farm to store.
+          </p>
         </div>
-        <div class="col-md-3">
-          <input id="signupPassword" type="password" class="form-control" placeholder="Password (min 4 chars)" required minlength="4">
-        </div>
-        <div class="col-md-3">
-          <select id="signupRole" class="form-select" required>
-            <option value="">Choose a role</option>
-            <option value="Farmer">Farmer</option>
-            <option value="WarehouseWorker">Warehouse Worker</option>
-            <option value="Retailer">Retailer</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <button type="submit" class="btn btn-success w-100">Sign Up</button>
-        </div>
-      </form>
-      <div id="signupStatus" class="mt-2 small"></div>
-      <p class="small text-muted mb-0 mt-2">
-        <strong>Note:</strong> New accounts require admin approval before login.
-      </p>
-    </div>
 
-    <!-- Farmer Dashboard -->
-    <div id="farmerSection" class="card p-3 mb-4" style="display:none;">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Farmer Dashboard</h5>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-success">Farmer</span>
-          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
-        </div>
-      </div>
-      <div class="card p-3 mb-3">
-        <h6>Add New Product</h6>
-        <input id="pid" class="form-control mb-2" placeholder="Product ID">
-        <input id="pname" class="form-control mb-2" placeholder="Product Name">
-        <input id="porigin" class="form-control mb-2" placeholder="Origin (Farm)">
-        <input id="pdate" type="date" class="form-control mb-2" aria-label="Harvest Date">
-        <input id="pproducer" class="form-control mb-2" placeholder="Producer Name">
-        <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
-        <div id="qrcode" class="mt-3 text-center"></div>
-        <button id="printQR" class="btn btn-secondary mt-3" style="display:none;">Print QR Code</button>
-        <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-      </div>
-      <div class="card p-3">
-        <h6>View My Product Timeline</h6>
-        <input id="gid" class="form-control mb-2" placeholder="Product ID">
-        <button class="btn btn-info mb-3" onclick="getHistory()">Get History</button>
-        <pre id="output"></pre>
-      </div>
-    </div>
+        <!-- Verification Card -->
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-4">Product Verification</h5>
 
-    <!-- Warehouse Dashboard -->
-    <div id="warehouseSection" class="card p-3 mb-4" style="display:none;">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Warehouse Dashboard</h5>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-warning text-dark">WarehouseWorker</span>
-          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
-        </div>
-      </div>
-      <div class="card p-3">
-        <h6>Update Product Status (Storage, Temperature, Logistics)</h6>
-        <input id="warehousePid" class="form-control mb-2" placeholder="Product ID">
-        <input id="warehouseParticipant" class="form-control mb-2" placeholder="Participant (Warehouse)">
-        <input id="warehouseEvent" class="form-control mb-2" placeholder="Event (Stored/Temperature Update/Dispatched)">
-        <input id="warehouseDate" class="form-control mb-2" placeholder="Date">
-        <button class="btn btn-success" onclick="updateWarehouseProduct()">Update Product</button>
-      </div>
-    </div>
+            <div class="mb-4">
+              <label for="publicTraceId" class="form-label">Product ID</label>
+              <input
+                type="text"
+                class="form-control form-control-lg"
+                id="publicTraceId"
+                placeholder="Enter Product ID (e.g., P0001)"
+                aria-label="Product ID">
+              <small class="form-text text-muted">
+                Find the product ID on the package label or QR code
+              </small>
+            </div>
 
-    <!-- Retailer Dashboard -->
-    <div id="retailerSection" class="card p-3 mb-4" style="display:none;">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Retailer Dashboard</h5>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-info text-dark">Retailer</span>
-          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+            <button
+              class="btn btn-primary btn-lg w-100"
+              onclick="publicGetHistory()">
+              Verify Product
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="card p-3">
-        <h6>Update Delivery and Store Placement</h6>
-        <input id="retailerPid" class="form-control mb-2" placeholder="Product ID">
-        <input id="retailerParticipant" class="form-control mb-2" placeholder="Participant (Retailer)">
-        <input id="retailerEvent" class="form-control mb-2" placeholder="Event (Delivered/Store Placement)">
-        <input id="retailerDate" class="form-control mb-2" placeholder="Date">
-        <button class="btn btn-success" onclick="updateRetailerProduct()">Update Product</button>
-      </div>
-    </div>
 
-    <!-- Admin Dashboard -->
-    <div id="adminSection" class="card p-3 mb-4" style="display:none;">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Admin Dashboard</h5>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-dark">Admin</span>
-          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+        <!-- Results Section -->
+        <div id="resultsSection" class="mt-4" style="display:none;">
+          <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">✓ Product History</h5>
+            </div>
+            <div class="card-body">
+              <div id="publicOutput" class="product-timeline"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="card p-3 mb-3">
-        <h6>Pending user approvals</h6>
-        <div class="table-responsive">
-          <table class="table table-bordered" id="pendingUserTable">
-            <thead><tr><th>Username</th><th>Requested Role</th><th>Status</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card p-3 mb-3">
-        <h6>Manage Users & Roles</h6>
-        <div class="table-responsive">
-          <table class="table table-bordered" id="userTable">
-            <thead><tr><th>Username</th><th>Current Role</th><th>Update Role</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card p-3">
-        <h6>View Traceability History</h6>
-        <input id="adminTraceId" class="form-control mb-2" placeholder="Product ID">
-        <button class="btn btn-info mb-3" onclick="adminGetHistory()">Get History</button>
-        <pre id="adminOutput"></pre>
-      </div>
-    </div>
 
-    <!-- Consumer Public Trace -->
-    <div id="consumerSection" class="card p-3 mb-4" style="display:none;">
-      <h5>Traceability Lookup</h5>
-      <input id="publicTraceId" class="form-control mb-2" placeholder="Product ID from QR">
-      <button class="btn btn-info mb-3" onclick="publicGetHistory()">View History</button>
-      <pre id="publicOutput"></pre>
+        <!-- Invalid Product Message -->
+        <div id="invalidProduct" class="alert alert-danger mt-4" style="display:none;">
+          <h5 class="alert-heading">Invalid or Unverified Product</h5>
+          <p class="mb-0">
+            The product ID you entered does not exist in our system. Please check the ID and try again,
+            or contact the retailer for assistance.
+          </p>
+        </div>
+
+        <!-- Info Section -->
+        <div class="card mt-5 bg-light border-0">
+          <div class="card-body">
+            <h6 class="card-title">Why Verify?</h6>
+            <ul class="mb-0">
+              <li>Confirm your strawberries are genuinely from Latvia</li>
+              <li>See the complete journey from farm to store</li>
+              <li>Verify harvest dates and handling conditions</li>
+              <li>Support local farmers with transparent practices</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Footer -->
+  <footer class="bg-white mt-5 py-4 border-top">
+    <div class="container text-center text-muted">
+      <small>
+        🍓 Strawberry Origin Traceability System<br>
+        Supporting Latvian farmers and transparent supply chains
+      </small>
+    </div>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="app.js"></script>
+  <style>
+    .product-timeline {
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0.25rem;
+      line-height: 1.8;
+    }
+  </style>
 </body>
 </html>

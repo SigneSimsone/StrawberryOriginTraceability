@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Warehouse Dashboard - Strawberry Traceability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">🍓 Warehouse Dashboard</h1>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-warning text-dark fs-6">Warehouse Worker</span>
+        <span id="warehouseUsername" class="text-muted"></span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Update Product Status Card -->
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">Update Product Status</h5>
+        <p class="text-muted mb-4">Record storage, temperature updates, and dispatch events</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="warehousePid" class="form-label">Product ID</label>
+            <input id="warehousePid" class="form-control" placeholder="Enter Product ID" required>
+          </div>
+          <div class="col-md-6">
+            <label for="warehouseParticipant" class="form-label">Warehouse Name</label>
+            <input id="warehouseParticipant" class="form-control" placeholder="e.g., Cold Storage Riga" required>
+          </div>
+          <div class="col-md-6">
+            <label for="warehouseEvent" class="form-label">Event Type</label>
+            <select id="warehouseEvent" class="form-select" required>
+              <option value="">Select event type</option>
+              <option value="Stored">Stored in warehouse</option>
+              <option value="Temperature Check">Temperature check</option>
+              <option value="Quality Inspection">Quality inspection</option>
+              <option value="Dispatched">Dispatched to retailer</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="warehouseDate" class="form-label">Date</label>
+            <input id="warehouseDate" type="date" class="form-control" required>
+          </div>
+        </div>
+        <button class="btn btn-success btn-lg w-100 mt-4" onclick="updateWarehouseProduct()">Update Product</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Session guard
+    window.addEventListener('DOMContentLoaded', () => {
+      const session = getCurrentUser();
+      if (!session) {
+        window.location.href = '/portal.html';
+        return;
+      }
+      if (session.role !== 'WarehouseWorker') {
+        alert('Access denied. This page is for warehouse workers only.');
+        window.location.href = '/portal.html';
+        return;
+      }
+      document.getElementById('warehouseUsername').textContent = session.username;
+
+      // Set today's date
+      document.getElementById('warehouseDate').value = new Date().toISOString().split('T')[0];
+    });
+  </script>
+</body>
+</html>

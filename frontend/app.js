@@ -399,21 +399,41 @@ async function adminGetHistory() {
 // ADDED FOR ROLE-BASED ACCESS: public history helper
 async function publicGetHistory() {
   const id = document.getElementById("publicTraceId").value.trim();
+  const outputEl = document.getElementById("publicOutput");
+  const resultsSection = document.getElementById("resultsSection");
+  const invalidProduct = document.getElementById("invalidProduct");
+
   if (!id) {
     alert("⚠️ Enter a product ID first.");
     return;
   }
+
+  // Hide previous results
+  if (resultsSection) resultsSection.style.display = "none";
+  if (invalidProduct) invalidProduct.style.display = "none";
+
   try {
     const contract = await getReadOnlyContract();
     const history = await contract.getHistory(id);
-    let text = "";
-    history.forEach((h) => {
-      text += `${h.participant} → ${h.eventType} on ${h.date}\n`;
-    });
-    document.getElementById("publicOutput").textContent = text || "No history found for this ID.";
+
+    if (history && history.length > 0) {
+      let text = "";
+      history.forEach((h) => {
+        text += `${h.participant} → ${h.eventType} on ${h.date}\n`;
+      });
+      outputEl.textContent = text;
+      if (resultsSection) resultsSection.style.display = "block";
+    } else {
+      outputEl.textContent = "No history found for this ID.";
+      if (invalidProduct) invalidProduct.style.display = "block";
+    }
   } catch (err) {
     console.error("❌ Error fetching public history:", err);
-    alert("❌ Unable to load history for this product.");
+    if (invalidProduct) {
+      invalidProduct.style.display = "block";
+    } else {
+      alert("❌ Unable to load history for this product.");
+    }
   }
 }
 
@@ -562,20 +582,18 @@ function clearSession() {
 // ADDED FOR ROLE-BASED ACCESS: logout helper
 function logout() {
   clearSession();
-  window.history.pushState({}, "", "/");
-  renderRoute();
+  window.location.href = "/portal.html";
 }
 
 function navigateForRole(role) {
   const map = {
-    Farmer: "/farmer",
-    WarehouseWorker: "/warehouse",
-    Retailer: "/retailer",
-    Admin: "/admin",
+    Farmer: "/farmer.html",
+    WarehouseWorker: "/warehouse.html",
+    Retailer: "/retailer.html",
+    Admin: "/admin.html",
   };
-  const path = map[role] || "/";
-  window.history.pushState({}, "", path);
-  renderRoute();
+  const page = map[role] || "/portal.html";
+  window.location.href = page;
 }
 
 function setVisibility(sectionId, visible) {

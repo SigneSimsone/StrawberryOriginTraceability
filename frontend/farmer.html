@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Farmer Dashboard - Strawberry Traceability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">🍓 Farmer Dashboard</h1>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success fs-6">Farmer</span>
+        <span id="farmerUsername" class="text-muted"></span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Add New Product Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">Add New Product</h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="pid" class="form-label">Product ID</label>
+            <input id="pid" class="form-control" placeholder="Auto-generated" readonly>
+          </div>
+          <div class="col-md-6">
+            <label for="pname" class="form-label">Product Name</label>
+            <input id="pname" class="form-control" placeholder="e.g., Fresh Strawberries" required>
+          </div>
+          <div class="col-md-6">
+            <label for="porigin" class="form-label">Origin (Farm Location)</label>
+            <input id="porigin" class="form-control" placeholder="e.g., Farm Valmiera, Latvia" required>
+          </div>
+          <div class="col-md-6">
+            <label for="pdate" class="form-label">Harvest Date</label>
+            <input id="pdate" type="date" class="form-control" required>
+          </div>
+          <div class="col-md-12">
+            <label for="pproducer" class="form-label">Producer Name</label>
+            <input id="pproducer" class="form-control" placeholder="Your farm/company name" required>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg w-100 mt-4" onclick="addProduct()">Add Product & Generate QR Code</button>
+
+        <!-- QR Code Display -->
+        <div id="qrcode" class="mt-4 text-center"></div>
+        <button id="printQR" class="btn btn-secondary mt-3 w-100" style="display:none;">Print QR Code</button>
+      </div>
+    </div>
+
+    <!-- View Product Timeline Card -->
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">View My Product Timeline</h5>
+        <div class="input-group mb-3">
+          <input id="gid" class="form-control" placeholder="Enter Product ID">
+          <button class="btn btn-info" onclick="getHistory()">Get History</button>
+        </div>
+        <pre id="output" class="bg-light p-3 rounded" style="min-height: 100px;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Session guard - check if user is logged in and is a farmer
+    window.addEventListener('DOMContentLoaded', () => {
+      const session = getCurrentUser();
+      if (!session) {
+        window.location.href = '/portal.html';
+        return;
+      }
+      if (session.role !== 'Farmer') {
+        alert('Access denied. This page is for farmers only.');
+        window.location.href = '/portal.html';
+        return;
+      }
+      // Display username
+      document.getElementById('farmerUsername').textContent = session.username;
+
+      // Initialize form
+      prepareFarmerForm();
+
+      // Setup print QR button
+      const printButton = document.getElementById("printQR");
+      if (printButton) {
+        printButton.addEventListener("click", function() {
+          const qrCanvas = document.querySelector("#qrcode canvas");
+          if (!qrCanvas) {
+            alert("No QR code available to print.");
+            return;
+          }
+          const qrImage = qrCanvas.toDataURL("image/png");
+          const newWindow = window.open("", "", "width=400,height=400");
+          newWindow.document.write(`
+            <html><head><title>Print QR Code</title></head>
+            <body style="text-align:center; font-family:Arial;">
+              <h3>Product QR Code</h3>
+              <img src="${qrImage}" alt="QR Code"><br>
+              <button onclick="window.print()">Print</button>
+            </body></html>
+          `);
+          newWindow.document.close();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
