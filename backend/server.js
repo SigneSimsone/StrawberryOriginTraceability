@@ -2,9 +2,11 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = 3000;
+const SALT_ROUNDS = 10;
 
 // Middleware
 app.use(cors());
@@ -48,7 +50,7 @@ app.get('/api/is-first-user', (req, res) => {
 });
 
 // API: Register new user
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { username, password, role } = req.body;
 
   // Validation
@@ -76,6 +78,9 @@ app.post('/api/register', (req, res) => {
     return res.status(409).json({ success: false, message: 'Username already exists.' });
   }
 
+  // Hash the password
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
   // First user becomes admin automatically
   const isFirstUser = Object.keys(users).length === 0;
   const userRole = isFirstUser ? 'Admin' : role;
@@ -83,7 +88,7 @@ app.post('/api/register', (req, res) => {
 
   users[username] = {
     role: userRole,
-    password,
+    password: hashedPassword,
     approved
   };
 
@@ -101,7 +106,7 @@ app.post('/api/register', (req, res) => {
 });
 
 // API: Login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
   const users = readUsers();
@@ -115,7 +120,10 @@ app.post('/api/login', (req, res) => {
     return res.status(403).json({ success: false, message: 'Awaiting admin approval' });
   }
 
-  if (user.password !== password) {
+  // Compare password with hashed password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 

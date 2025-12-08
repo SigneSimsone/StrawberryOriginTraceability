@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "role": "Admin",
+    "password": "$2b$10$SONyH93bEuP9sb/0lzdibe2PLd3bb95D8GfwtGRzFvgpae1v5RT5G",
+    "approved": true
+  },
+  "farmer1": {
+    "role": "Farmer",
+    "password": "$2b$10$nqIxP6ymYfOCoGLW1ITa8Oh7DvDVGuS7zd6j4wugDuwdwCispe5Ju",
+    "approved": false
+  }
+}
