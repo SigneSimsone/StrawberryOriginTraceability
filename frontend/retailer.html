@@ -26,8 +26,8 @@
     <!-- Update Delivery and Store Placement Card -->
     <div class="card shadow-sm">
       <div class="card-body p-4">
-        <h5 class="card-title mb-4">Update Delivery and Store Placement</h5>
-        <p class="text-muted mb-4">Record product arrival and store placement</p>
+        <h5 class="card-title mb-4">Update Product Status</h5>
+        <p class="text-muted mb-4">Record sealed package arrival and store placement</p>
         <div class="row g-3">
           <div class="col-md-6">
             <label for="retailerPid" class="form-label">Product ID</label>
@@ -41,10 +41,8 @@
             <label for="retailerEvent" class="form-label">Event Type</label>
             <select id="retailerEvent" class="form-select" required>
               <option value="">Select event type</option>
-              <option value="Delivered">Delivered to store</option>
-              <option value="Store Placement">Placed on store shelves</option>
-              <option value="Quality Check">Quality check</option>
-              <option value="Available for Sale">Available for sale</option>
+              <option value="Received sealed package">Received sealed package</option>
+              <option value="Placed on store shelves">Placed on store shelves</option>
             </select>
           </div>
           <div class="col-md-6">

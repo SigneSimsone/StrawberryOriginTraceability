@@ -301,7 +301,10 @@ async function createProduct() {
 
   const contract = await getContract();
   const tx = await contract.createProduct(id, name, origin, date, producer);
-  await tx.wait();
+  const receipt = await tx.wait();
+
+  // Capture the unique transaction hash
+  const txHash = receipt.transactionHash;
 
   // Increment counter only after successful blockchain transaction
   let productCounter = localStorage.getItem("productCounter")
@@ -310,22 +313,14 @@ async function createProduct() {
   productCounter++;
   localStorage.setItem("productCounter", productCounter);
 
-  alert("✅ Product added successfully!");
-  QRCode.toCanvas(document.getElementById("qrcode"), id);
+  // Show success notification
+  alert("✅ Product added successfully to blockchain!\n\n📦 Product ID: " + id + "\n🔗 Transaction Hash: " + txHash + "\n📱 QR Code generated below");
 
-  // Clear form fields
-  document.getElementById("pname").value = "";
-  document.getElementById("porigin").value = "";
-  document.getElementById("pproducer").value = "";
-
-  // Refresh form to show next available ID
-  prepareFarmerForm();
-
-  return true;
+  return { success: true, txHash };
   } catch (err) {
     console.error("❌ Error in createProduct:", err);
     alert("❌ Failed to add product. Open browser console (F12 → Console) to see details.");
-    return false;
+    return { success: false };
   }
 }
 
@@ -385,7 +380,9 @@ async function getHistory() {
     let text = "";
     history.forEach((h) => {
       const formattedDate = formatDateString(h.date) || h.date;
-      text += `${h.participant} → ${h.eventType} on ${formattedDate}\n`;
+      const timestamp = new Date(h.timestamp * 1000); // Convert Unix timestamp (seconds) to milliseconds
+      const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      text += `[Product ${id}] ${h.participant} → ${h.eventType} on ${formattedDate} at ${time}\n`;
     });
 
     outputEl.textContent = text || "No history found for this ID.";
@@ -415,7 +412,9 @@ async function adminGetHistory() {
     let text = "";
     history.forEach((h) => {
       const formattedDate = formatDateString(h.date) || h.date;
-      text += `${h.participant} → ${h.eventType} on ${formattedDate}\n`;
+      const timestamp = new Date(h.timestamp * 1000); // Convert Unix timestamp (seconds) to milliseconds
+      const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      text += `[Product ${id}] ${h.participant} → ${h.eventType} on ${formattedDate} at ${time}\n`;
     });
 
     outputEl.textContent = text || "No history found for this ID.";
@@ -451,7 +450,9 @@ async function publicGetHistory() {
       let text = "";
       history.forEach((h) => {
         const formattedDate = formatDateString(h.date) || h.date;
-        text += `${h.participant} → ${h.eventType} on ${formattedDate}\n`;
+        const timestamp = new Date(h.timestamp * 1000); // Convert Unix timestamp (seconds) to milliseconds
+        const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        text += `[Product ${id}] ${h.participant} → ${h.eventType} on ${formattedDate} at ${time}\n`;
       });
       outputEl.textContent = text;
       if (resultsSection) resultsSection.style.display = "block";
@@ -471,7 +472,7 @@ async function publicGetHistory() {
 
 // ---------- QR/FRONTEND HELPERS ----------
 // Function to create QR only
-async function generateQR() {
+async function generateQR(txHash = null) {
   const pid = document.getElementById("pid").value;
   const pname = document.getElementById("pname").value.trim();
   const porigin = document.getElementById("porigin").value.trim();
@@ -488,13 +489,57 @@ async function generateQR() {
   document.getElementById("printQR").style.display = "none";
 
   try {
-    const canvas = document.createElement("canvas");
-    qrContainer.appendChild(canvas);
+    // Create QR code wrapper with styling
+    const qrWrapper = document.createElement("div");
+    qrWrapper.className = "qr-code-wrapper";
+    const txHashDisplay = txHash ? `<div class="product-detail"><strong>Blockchain TX:</strong> <span class="text-break small">${txHash}</span></div>` : '';
+    qrWrapper.innerHTML = `
+      <div class="alert alert-success mb-3">
+        <strong>✓ QR Code Generated Successfully!</strong>
+        <p class="mb-0 small">Scan this code to verify product authenticity</p>
+      </div>
+      <div class="qr-display-card">
+        <div class="row">
+          <div class="col-md-6 text-center qr-canvas-container">
+            <canvas id="qr-canvas"></canvas>
+            <p class="small text-muted mt-2">Scan with any QR code reader</p>
+          </div>
+          <div class="col-md-6 qr-product-info">
+            <h6 class="mb-3">Product Information</h6>
+            <div class="product-detail"><strong>Product ID:</strong> ${pid}</div>
+            <div class="product-detail"><strong>Name:</strong> ${pname}</div>
+            <div class="product-detail"><strong>Origin:</strong> ${porigin}</div>
+            <div class="product-detail"><strong>Harvest Date:</strong> ${pdate}</div>
+            <div class="product-detail"><strong>Producer:</strong> ${pproducer}</div>
+            ${txHashDisplay}
+          </div>
+        </div>
+      </div>
+    `;
+    qrContainer.appendChild(qrWrapper);
 
+    // Generate QR code on the canvas
+    const canvas = document.getElementById("qr-canvas");
     const readableDate = formatDateString(pdate) || pdate;
-    const qrText = `Product ID: ${pid}\nName: ${pname}\nOrigin: ${porigin}\nHarvest Date: ${readableDate}\nProducer: ${pproducer}`;
-    await QRCode.toCanvas(canvas, qrText);
+    // Include transaction hash in QR code for uniqueness and verification
+    const qrText = txHash
+      ? `Product ID: ${pid}\nName: ${pname}\nOrigin: ${porigin}\nHarvest Date: ${readableDate}\nProducer: ${pproducer}\nBlockchain TX: ${txHash}`
+      : `Product ID: ${pid}\nName: ${pname}\nOrigin: ${porigin}\nHarvest Date: ${readableDate}\nProducer: ${pproducer}`;
+    await QRCode.toCanvas(canvas, qrText, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+
     document.getElementById("printQR").style.display = "inline-block";
+
+    // Smooth scroll to QR code
+    setTimeout(() => {
+      qrContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
   } catch (err) {
     console.error("QR generation error:", err);
     alert("Could not generate QR code.");
@@ -503,11 +548,11 @@ async function generateQR() {
 
 // Combined function → runs MetaMask logic from app.js + QR generator
 async function addProduct() {
-  let created = false;
+  let result = { success: false };
   try {
     // Call blockchain createProduct() from app.js (MetaMask)
     if (typeof createProduct === "function") {
-      created = await createProduct();
+      result = await createProduct();
     } else {
       console.warn("createProduct() not found in app.js");
     }
@@ -516,8 +561,16 @@ async function addProduct() {
   }
 
   // Only generate QR code when product creation succeeds
-  if (created) {
-    await generateQR();
+  if (result.success) {
+    await generateQR(result.txHash);
+
+    // Clear form fields AFTER QR code is generated
+    document.getElementById("pname").value = "";
+    document.getElementById("porigin").value = "";
+    document.getElementById("pproducer").value = "";
+
+    // Refresh form to show next available ID
+    prepareFarmerForm();
   }
 }
 

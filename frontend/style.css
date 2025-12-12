@@ -257,10 +257,90 @@ h2::before {
 
 /* QR Code Container */
 #qrcode {
-  padding: 2rem;
+  margin-top: 1.5rem;
+}
+
+.qr-code-wrapper {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.qr-display-card {
   background: white;
   border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--card-shadow);
+  border: 2px solid #e9ecef;
+}
+
+.qr-canvas-container {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-canvas-container canvas {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-product-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 2rem;
+}
+
+.qr-product-info h6 {
+  color: var(--dark-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--strawberry-accent);
+  padding-bottom: 0.5rem;
+}
+
+.product-detail {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f8f9fa;
+  font-size: 0.9rem;
+}
+
+.product-detail:last-child {
+  border-bottom: none;
+}
+
+.product-detail strong {
+  color: var(--dark-color);
   display: inline-block;
+  width: 120px;
+}
+
+#printQR {
+  margin-top: 1rem;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+  border: none;
+}
+
+#printQR:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+  box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Responsive QR Code Display */
+@media (max-width: 768px) {
+  .qr-product-info {
+    padding-left: 0;
+    margin-top: 1.5rem;
+  }
+
+  .qr-display-card {
+    padding: 1.5rem;
+  }
 }
 
 /* Product Timeline */

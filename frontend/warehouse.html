@@ -27,7 +27,7 @@
     <div class="card shadow-sm">
       <div class="card-body p-4">
         <h5 class="card-title mb-4">Update Product Status</h5>
-        <p class="text-muted mb-4">Record storage, temperature updates, and dispatch events</p>
+        <p class="text-muted mb-4">Record receiving sealed packages, storage in cooling facility, and dispatch events</p>
         <div class="row g-3">
           <div class="col-md-6">
             <label for="warehousePid" class="form-label">Product ID</label>
@@ -41,10 +41,9 @@
             <label for="warehouseEvent" class="form-label">Event Type</label>
             <select id="warehouseEvent" class="form-select" required>
               <option value="">Select event type</option>
-              <option value="Stored">Stored in warehouse</option>
-              <option value="Temperature Check">Temperature check</option>
-              <option value="Quality Inspection">Quality inspection</option>
-              <option value="Dispatched">Dispatched to retailer</option>
+              <option value="Received sealed package">Received sealed package</option>
+              <option value="Stored in cooling facility">Stored in cooling facility</option>
+              <option value="Dispatched to retailer">Dispatched to retailer</option>
             </select>
           </div>
           <div class="col-md-6">

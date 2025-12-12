@@ -34,7 +34,7 @@ contract StrawberryTraceability {
         p.name = name;
         p.origin = origin;
         p.producer = producer;
-        p.history.push(Event(producer, "Harvested", date, block.timestamp));
+        p.history.push(Event(producer, "Harvested, Washed & Packaged", date, block.timestamp));
         emit ProductCreated(productId, producer);
     }
 
