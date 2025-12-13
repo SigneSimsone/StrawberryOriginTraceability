@@ -18,5 +18,10 @@
     "role": "Retailer",
     "password": "$2b$10$iV1jaGCmeHIFOdvkeNIaW.WjxUe.uAnoXhIqyWZZHeSJl8UYwpRVi",
     "approved": true
+  },
+  "abab": {
+    "role": "Farmer",
+    "password": "$2b$10$Xza5uZFWfUlDYqQ2JmO8FOiPoVUilKk0wbf4ijBGqf3/1g9bzPMle",
+    "approved": true
   }
 }

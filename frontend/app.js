@@ -254,22 +254,99 @@ async function getContract() {
 
 // Public/read-only contract instance that does not prompt the user to connect
 async function getReadOnlyContract() {
-  // Ensure ethers.js is available from the CDN script or load it lazily.
   const ethersLib = await ensureEthersLoaded().catch((err) => {
     console.error("ethers load error", err);
     alert("❌ Ethers.js failed to load. Please check your connection and refresh the page.");
     return null;
   });
-  if (!ethersLib) {
-    throw new Error("ethers.js not available on window");
-  }
+  if (!ethersLib) throw new Error("ethers.js not available on window");
 
-  const provider = window.ethereum
-    ? new ethersLib.providers.Web3Provider(window.ethereum)
-    : new ethersLib.providers.JsonRpcProvider("http://127.0.0.1:8545");
-
+  // Always read from local Hardhat node (stable for logs)
+  const provider = new ethersLib.providers.JsonRpcProvider("http://127.0.0.1:8545");
   return new ethersLib.Contract(contractAddress, contractABI, provider);
 }
+
+
+// ---------- MY QR LIST (Farmer / Warehouse / Retailer) ----------
+function buildConsumerUrl(productId) {
+  return `${window.location.origin}/index.html?productId=${encodeURIComponent(productId)}`;
+}
+
+async function renderMyQrListForCurrentPage() {
+  const container = document.getElementById("myQrList");
+  if (!container) return;
+
+  const session = getCurrentUser();
+  if (!session || !session.username) {
+    container.innerHTML = "<p class='text-muted'>Please log in to see your products.</p>";
+    return;
+  }
+
+  const username = session.username;
+  const contract = await getReadOnlyContract();
+
+  // Read blockchain events
+  const createdEvents = await contract.queryFilter("ProductCreated", 0, "latest");
+  const updatedEvents = await contract.queryFilter("ProductUpdated", 0, "latest");
+
+  let productIds = [];
+  const page = window.location.pathname.toLowerCase();
+
+  if (page.endsWith("farmer.html")) {
+    // Farmer → products they created
+    productIds = createdEvents
+      .filter(e => e.args?.producer === username)
+      .map(e => e.args.productId);
+  } else {
+    // Warehouse / Retailer → products they updated
+    productIds = updatedEvents
+      .filter(e => e.args?.participant === username)
+      .map(e => e.args.productId);
+  }
+
+  productIds = [...new Set(productIds)]; // unique
+
+  if (productIds.length === 0) {
+    container.innerHTML = "<p class='text-muted'>No products found yet.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  for (const id of productIds) {
+    const url = buildConsumerUrl(id);
+
+    const card = document.createElement("div");
+    card.className = "card shadow-sm mb-3";
+    card.innerHTML = `
+      <div class="card-body p-3">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-8">
+            <div><strong>Product ID:</strong> ${id}</div>
+            <div class="mt-1">
+              <strong>Verification link:</strong>
+              <a href="${url}" target="_blank" rel="noopener noreferrer">
+                ${url}
+              </a>
+            </div>
+          </div>
+          <div class="col-md-4 text-center">
+            <canvas id="myqr-${id}"></canvas>
+            <div class="small text-muted mt-2">Scan to verify</div>
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+
+    // Draw QR
+    if (window.QRCode?.toCanvas) {
+      const canvas = document.getElementById(`myqr-${id}`);
+      await QRCode.toCanvas(canvas, url, { width: 140, margin: 1 });
+    }
+  }
+}
+
 
 // ADDED FOR ROLE-BASED ACCESS
 function checkRole(allowedRoles) {
@@ -289,9 +366,12 @@ async function createProduct() {
   const name = document.getElementById("pname").value.trim();
   const origin = document.getElementById("porigin").value.trim();
   const dateInput = document.getElementById("pdate").value.trim();
-  const producer = document.getElementById("pproducer").value.trim();
+  const producerDisplay = document.getElementById("pproducer").value.trim(); // keep for UI only
+  const session = getCurrentUser();
+  const producer = session?.username || producerDisplay; // on-chain identity = username
 
-  if (!id || !name || !origin || !dateInput || !producer) {
+
+  if (!id || !name || !origin || !dateInput || !producerDisplay) {
     alert("⚠️ Please fill in all fields.");
     return;
   }
@@ -330,20 +410,32 @@ async function updateProductFromFields(fieldMap, allowedRoles) {
   if (!checkRole(allowedRoles)) return;
 
   const id = document.getElementById(fieldMap.id)?.value.trim();
-  const participant = document.getElementById(fieldMap.participant)?.value.trim();
+  const session = getCurrentUser();
+  const participant = session?.username || ""; // on-chain identity = username
+
+  const locationName = document.getElementById(fieldMap.participant)?.value.trim(); // warehouse/store name (UI)
   const event = document.getElementById(fieldMap.event)?.value.trim();
+
+  const eventWithLocation = locationName ? `${event} @ ${locationName}` : event;
+
   const dateInput = document.getElementById(fieldMap.date)?.value.trim();
 
-  if (!id || !participant || !event || !dateInput) {
+  if (!id || !event || !dateInput) {
     alert("⚠️ Please fill in all fields.");
     return;
   }
+  if (!participant) {
+    alert("⚠️ You must be logged in.");
+    return;
+  }
+
 
   // Convert DD/MM/YYYY to YYYY-MM-DD for blockchain storage
   const date = convertDDMMYYYYtoISO(dateInput);
 
   const contract = await getContract();
-  const tx = await contract.updateProduct(id, participant, event, date);
+  const tx = await contract.updateProduct(id, participant, eventWithLocation, date);
+
   await tx.wait();
 
   alert("✅ Product updated successfully!");
@@ -471,7 +563,7 @@ async function publicGetHistory() {
 }
 
 // ---------- QR/FRONTEND HELPERS ----------
-// Function to create QR only
+// Function to create QR only (UPDATED: QR encodes a URL + clickable link shown)
 async function generateQR(txHash = null) {
   const pid = document.getElementById("pid").value;
   const pname = document.getElementById("pname").value.trim();
@@ -492,7 +584,11 @@ async function generateQR(txHash = null) {
     // Create QR code wrapper with styling
     const qrWrapper = document.createElement("div");
     qrWrapper.className = "qr-code-wrapper";
-    const txHashDisplay = txHash ? `<div class="product-detail"><strong>Blockchain TX:</strong> <span class="text-break small">${txHash}</span></div>` : '';
+
+    const txHashDisplay = txHash
+      ? `<div class="product-detail"><strong>Blockchain TX:</strong> <span class="text-break small">${txHash}</span></div>`
+      : "";
+
     qrWrapper.innerHTML = `
       <div class="alert alert-success mb-3">
         <strong>✓ QR Code Generated Successfully!</strong>
@@ -518,33 +614,49 @@ async function generateQR(txHash = null) {
     `;
     qrContainer.appendChild(qrWrapper);
 
-    // Generate QR code on the canvas
+    // ✅ UPDATED: QR contains a URL to the consumer verification page
+    // This is what makes the QR "live": consumer page fetches latest on-chain history by productId
+    const qrUrl = `${window.location.origin}/index.html?productId=${encodeURIComponent(pid)}`;
+
+    // Add clickable link for PC users (next to product info)
+    const infoPanel = qrWrapper.querySelector(".qr-product-info");
+    if (infoPanel) {
+      infoPanel.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="product-detail">
+          <strong>Verification link:</strong>
+          <a href="${qrUrl}" target="_blank" rel="noopener noreferrer">
+            ${qrUrl}
+          </a>
+        </div>
+        `
+      );
+    }
+
+    // Generate QR code on the canvas (encodes the URL)
     const canvas = document.getElementById("qr-canvas");
-    const readableDate = formatDateString(pdate) || pdate;
-    // Include transaction hash in QR code for uniqueness and verification
-    const qrText = txHash
-      ? `Product ID: ${pid}\nName: ${pname}\nOrigin: ${porigin}\nHarvest Date: ${readableDate}\nProducer: ${pproducer}\nBlockchain TX: ${txHash}`
-      : `Product ID: ${pid}\nName: ${pname}\nOrigin: ${porigin}\nHarvest Date: ${readableDate}\nProducer: ${pproducer}`;
-    await QRCode.toCanvas(canvas, qrText, {
+    await QRCode.toCanvas(canvas, qrUrl, {
       width: 200,
       margin: 2,
       color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
     });
 
     document.getElementById("printQR").style.display = "inline-block";
 
     // Smooth scroll to QR code
     setTimeout(() => {
-      qrContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      qrContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 100);
   } catch (err) {
     console.error("QR generation error:", err);
     alert("Could not generate QR code.");
   }
 }
+
 
 // Combined function → runs MetaMask logic from app.js + QR generator
 async function addProduct() {
@@ -975,6 +1087,7 @@ function setupSignup() {
 window.addEventListener("DOMContentLoaded", () => {
   setupLogin();
   setupSignup();
+  renderMyQrListForCurrentPage();
   // renderRoute(); // Disabled - using separate pages now
   // Print QR Code
   const printButton = document.getElementById("printQR");

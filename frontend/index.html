@@ -102,6 +102,22 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="app.js"></script>
+  <script>
+  function getProductIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("productId");
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const pid = getProductIdFromUrl();
+    if (pid) {
+      const input = document.getElementById("publicTraceId");
+      if (input) input.value = pid;
+      publicGetHistory(); // uses getReadOnlyContract() in app.js
+    }
+  });
+</script>
+
   <style>
     .product-timeline {
       white-space: pre-wrap;
