@@ -314,37 +314,83 @@ async function renderMyQrListForCurrentPage() {
   container.innerHTML = "";
 
   for (const id of productIds) {
-    const url = buildConsumerUrl(id);
+  const url = buildConsumerUrl(id);
 
-    const card = document.createElement("div");
-    card.className = "card shadow-sm mb-3";
-    card.innerHTML = `
-      <div class="card-body p-3">
-        <div class="row g-3 align-items-center">
-          <div class="col-md-8">
-            <div><strong>Product ID:</strong> ${id}</div>
-            <div class="mt-1">
-              <strong>Verification link:</strong>
-              <a href="${url}" target="_blank" rel="noopener noreferrer">
-                ${url}
-              </a>
-            </div>
+  const qrCanvasId = `myqr-${id}`;
+  const historyDivId = `hist-${id}`;
+
+  const card = document.createElement("div");
+  card.className = "card shadow-sm mb-3";
+  card.innerHTML = `
+    <div class="card-body p-3">
+      <div class="row g-3 align-items-start">
+        <div class="col-md-8">
+          <div><strong>Product ID:</strong> ${id}</div>
+
+          <div class="mt-1">
+            <strong>Verification link:</strong>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>
           </div>
-          <div class="col-md-4 text-center">
-            <canvas id="myqr-${id}"></canvas>
-            <div class="small text-muted mt-2">Scan to verify</div>
+
+          <div class="mt-3">
+            <strong>Updates:</strong>
+            <div id="${historyDivId}" class="product-timeline mt-2"></div>
           </div>
         </div>
-      </div>
-    `;
-    container.appendChild(card);
 
-    // Draw QR
-    if (window.QRCode?.toCanvas) {
-      const canvas = document.getElementById(`myqr-${id}`);
-      await QRCode.toCanvas(canvas, url, { width: 140, margin: 1 });
-    }
+        <div class="col-md-4 text-center">
+          <canvas id="${qrCanvasId}"></canvas>
+          <div class="small text-muted mt-2">Scan to verify</div>
+
+          <button class="btn btn-secondary btn-sm mt-2 w-100" type="button">
+            Print QR
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+
+  // Draw QR
+  if (window.QRCode?.toCanvas) {
+    const canvas = document.getElementById(qrCanvasId);
+    await QRCode.toCanvas(canvas, url, { width: 140, margin: 1 });
   }
+
+  // Print button
+  const btn = card.querySelector("button.btn.btn-secondary");
+  if (btn) btn.addEventListener("click", () => printQrCanvas(qrCanvasId, `QR Code - ${id}`));
+
+  // Load and render full history inline
+  const histEl = document.getElementById(historyDivId);
+  try {
+    const history = await contract.getHistory(id);
+
+    if (!history || history.length === 0) {
+      histEl.innerHTML = "<span class='text-muted'>No history.</span>";
+      continue;
+    }
+
+    // Oldest -> newest
+    let html = "";
+    for (const h of history) {
+      const formattedDate = (typeof formatDateString === "function")
+        ? (formatDateString(h.date) || h.date)
+        : h.date;
+
+      const ts = new Date(Number(h.timestamp) * 1000);
+      const time = ts.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+      html += `• <strong>${h.participant}</strong> → ${h.eventType}<br>
+               <span class="text-muted small">(${formattedDate} at ${time})</span><br><br>`;
+    }
+    histEl.innerHTML = html;
+  } catch (e) {
+    console.error("Failed to load history for", id, e);
+    histEl.innerHTML = "<span class='text-danger small'>Failed to load history.</span>";
+  }
+}
+
 }
 
 
@@ -1113,3 +1159,26 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+function printQrCanvas(canvasId, title = "Product QR Code") {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    alert("No QR code available to print.");
+    return;
+  }
+  const img = canvas.toDataURL("image/png");
+  const w = window.open("", "", "width=450,height=520");
+  w.document.write(`
+    <html>
+      <head><title>${title}</title></head>
+      <body style="text-align:center;font-family:Arial;padding:20px;">
+        <h3>${title}</h3>
+        <img src="${img}" style="max-width:320px;" />
+        <br><br>
+        <button onclick="window.print()">Print</button>
+      </body>
+    </html>
+  `);
+  w.document.close();
+}
