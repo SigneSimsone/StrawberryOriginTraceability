@@ -194,3 +194,5 @@ app.listen(PORT, () => {
   console.log(`🍓 Strawberry Traceability Server running on http://localhost:${PORT}`);
   console.log(`📁 User data stored in: ${USERS_FILE}`);
 });
+
+
