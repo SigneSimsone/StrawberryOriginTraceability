@@ -4,24 +4,36 @@
     "password": "$2b$10$SONyH93bEuP9sb/0lzdibe2PLd3bb95D8GfwtGRzFvgpae1v5RT5G",
     "approved": true
   },
-  "farmer1": {
+  "Joe_Bee": {
     "role": "Farmer",
-    "password": "$2b$10$nqIxP6ymYfOCoGLW1ITa8Oh7DvDVGuS7zd6j4wugDuwdwCispe5Ju",
+    "password": "$2b$10$FzE6nW0f7R75gFTy17ntQusYnEc7/Izl73DnHKbUDZ3BZ6DtlVJF6",
     "approved": true
   },
-  "warehouse_worker1": {
+  "Lisa_Adams": {
     "role": "WarehouseWorker",
-    "password": "$2b$10$7ZR4zYsDwatEePSNOas8.u892ZjQ9NCooFW57DWDhLS2DMBupRMOu",
-    "approved": true
+    "password": "$2b$10$GH8GHhnNWYL4.4wlEC7eGeA4K9itslpV3Cfi5jhOwDkg1wNmstYGe",
+    "approved": true,
+    "printRequests": [
+      {
+        "productId": "P0015",
+        "status": "approved",
+        "requestDate": "2025-12-25T15:26:44.899Z",
+        "message": "damaged package",
+        "processedDate": "2025-12-25T15:27:21.608Z"
+      }
+    ]
   },
-  "retailer1": {
+  "Josh_Winters": {
     "role": "Retailer",
-    "password": "$2b$10$iV1jaGCmeHIFOdvkeNIaW.WjxUe.uAnoXhIqyWZZHeSJl8UYwpRVi",
-    "approved": true
-  },
-  "abab": {
-    "role": "Farmer",
-    "password": "$2b$10$Xza5uZFWfUlDYqQ2JmO8FOiPoVUilKk0wbf4ijBGqf3/1g9bzPMle",
-    "approved": true
+    "password": "$2b$10$moHXG8mC1VhhUje1UnwQ0ucEj46qwHYgSGcOAn.Hcm12Zql0A3Z..",
+    "approved": true,
+    "printRequests": [
+      {
+        "productId": "P0015",
+        "status": "denied",
+        "requestDate": "2025-12-25T15:11:13.222Z",
+        "processedDate": "2025-12-25T15:25:36.047Z"
+      }
+    ]
   }
 }

@@ -41,6 +41,29 @@
       </div>
     </div>
 
+    <!-- Print Requests Management Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">QR Print Requests Management</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered" id="printRequestTable">
+            <thead class="table-light">
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Product ID</th>
+                <th>Message</th>
+                <th>Status</th>
+                <th>Request Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Manage Users & Roles Card -->
     <div class="card shadow-sm mb-4">
       <div class="card-body p-4">
@@ -51,6 +74,7 @@
               <tr>
                 <th>Username</th>
                 <th>Current Role</th>
+                <th>Verified Producer</th>
                 <th>Update Role</th>
                 <th>Actions</th>
               </tr>
@@ -94,6 +118,7 @@
       // Load user tables
       populateUserTable();
       populatePendingTable();
+      populatePrintRequestTable();
     });
   </script>
 </body>

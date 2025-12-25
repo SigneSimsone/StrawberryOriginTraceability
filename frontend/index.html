@@ -115,13 +115,22 @@
       if (input) input.value = pid;
       publicGetHistory(); // uses getReadOnlyContract() in app.js
     }
+
+    // Add Enter key support for search
+    const searchInput = document.getElementById("publicTraceId");
+    if (searchInput) {
+      searchInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          publicGetHistory();
+        }
+      });
+    }
   });
 </script>
 
   <style>
     .product-timeline {
-      white-space: pre-wrap;
-      font-family: 'Courier New', monospace;
       background: #f8f9fa;
       padding: 1rem;
       border-radius: 0.25rem;

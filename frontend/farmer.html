@@ -14,6 +14,7 @@
       <div class="d-flex align-items-center gap-3">
         <span class="badge bg-success">Farmer</span>
         <span id="farmerUsername" class="text-muted small"></span>
+        <span id="farmerVerifiedBadge"></span>
         <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -57,24 +58,15 @@
         <button id="printQR" class="btn btn-secondary mt-3 w-100" style="display:none;">Print QR Code</button>
       </div>
     </div>
-    <!-- My QR Links Card -->
-<div class="card shadow-sm mb-4">
-  <div class="card-body p-4">
-    <h5 class="card-title mb-4">My QR Links</h5>
-    <div id="myQrList"></div>
-  </div>
-</div>
-
-
-    <!-- View Product Timeline Card -->
-    <div class="card shadow-sm">
+    <!-- Search Product Card -->
+    <div class="card shadow-sm mb-4">
       <div class="card-body p-4">
-        <h5 class="card-title mb-4">View My Product Timeline</h5>
+        <h5 class="card-title mb-4">View Product Details</h5>
         <div class="input-group mb-3">
-          <input id="gid" class="form-control" placeholder="Enter Product ID">
-          <button class="btn btn-info" onclick="getHistory()">Get History</button>
+          <input id="searchProductId" class="form-control" placeholder="Enter Product ID (e.g., P0001)">
+          <button class="btn btn-info" onclick="searchMyProduct()">Search</button>
         </div>
-        <pre id="output" class="bg-light p-3 rounded" style="min-height: 100px; display:none;"></pre>
+        <div id="myQrList"></div>
       </div>
     </div>
   </div>
@@ -99,8 +91,25 @@
       // Display username
       document.getElementById('farmerUsername').textContent = session.username;
 
+      // Display verified producer badge (all approved farmers are verified)
+      const verifiedBadgeEl = document.getElementById('farmerVerifiedBadge');
+      if (verifiedBadgeEl) {
+        verifiedBadgeEl.innerHTML = '<span class="verified-producer-badge">🇱🇻 Latvian Verified Producer</span>';
+      }
+
       // Initialize form
       prepareFarmerForm();
+
+      // Add Enter key support for search
+      const searchInput = document.getElementById("searchProductId");
+      if (searchInput) {
+        searchInput.addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            searchMyProduct();
+          }
+        });
+      }
 
       // Setup print QR button
       const printButton = document.getElementById("printQR");

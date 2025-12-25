@@ -89,7 +89,8 @@ app.post('/api/register', async (req, res) => {
   users[username] = {
     role: userRole,
     password: hashedPassword,
-    approved
+    approved,
+    printRequests: [] // Store print requests per user
   };
 
   if (writeUsers(users)) {
@@ -129,7 +130,11 @@ app.post('/api/login', async (req, res) => {
 
   res.json({
     success: true,
-    user: { username, role: user.role }
+    user: {
+      username,
+      role: user.role,
+      printRequests: user.printRequests || []
+    }
   });
 });
 
@@ -181,6 +186,129 @@ app.delete('/api/users/:username', (req, res) => {
     res.json({ success: true, message: 'User deleted successfully' });
   } else {
     res.status(500).json({ success: false, message: 'Failed to delete user' });
+  }
+});
+
+// API: Create print request
+app.post('/api/print-request', (req, res) => {
+  const { username, productId, message } = req.body;
+
+  if (!username || !productId) {
+    return res.status(400).json({ success: false, message: 'Username and Product ID are required' });
+  }
+
+  const users = readUsers();
+
+  if (!users[username]) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  // Initialize printRequests if not exists
+  if (!users[username].printRequests) {
+    users[username].printRequests = [];
+  }
+
+  // Check if request already exists
+  const existingRequest = users[username].printRequests.find(
+    r => r.productId === productId
+  );
+
+  if (existingRequest) {
+    if (existingRequest.status === 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already pending for this product' });
+    }
+    if (existingRequest.status === 'approved') {
+      return res.status(400).json({ success: false, message: 'Print permission already granted for this product' });
+    }
+
+    // If request was denied, update it to pending again
+    if (existingRequest.status === 'denied') {
+      existingRequest.status = 'pending';
+      existingRequest.requestDate = new Date().toISOString();
+      existingRequest.message = message || ''; // Update message
+      delete existingRequest.processedDate; // Remove the processed date
+    }
+  } else {
+    // Create new request only if no existing request
+    const request = {
+      productId,
+      status: 'pending',
+      requestDate: new Date().toISOString(),
+      message: message || '' // Include optional message
+    };
+
+    users[username].printRequests.push(request);
+  }
+
+  if (writeUsers(users)) {
+    res.json({ success: true, message: 'Print request submitted successfully' });
+  } else {
+    res.status(500).json({ success: false, message: 'Failed to submit print request' });
+  }
+});
+
+// API: Get all print requests (admin only)
+app.get('/api/print-requests/all', (req, res) => {
+  const users = readUsers();
+  const allRequests = [];
+
+  Object.entries(users).forEach(([username, user]) => {
+    if (user.printRequests) {
+      user.printRequests.forEach(request => {
+        allRequests.push({
+          username,
+          role: user.role,
+          productId: request.productId,
+          requestDate: request.requestDate,
+          status: request.status,
+          processedDate: request.processedDate || null,
+          message: request.message || ''
+        });
+      });
+    }
+  });
+
+  // Sort by request date (newest first)
+  allRequests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
+
+  res.json({ success: true, requests: allRequests });
+});
+
+// API: Approve or deny print request
+app.put('/api/print-request', (req, res) => {
+  const { username, productId, status } = req.body;
+
+  if (!username || !productId || !status) {
+    return res.status(400).json({ success: false, message: 'Username, Product ID, and status are required' });
+  }
+
+  if (status !== 'approved' && status !== 'denied') {
+    return res.status(400).json({ success: false, message: 'Invalid status' });
+  }
+
+  const users = readUsers();
+
+  if (!users[username]) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  if (!users[username].printRequests) {
+    return res.status(404).json({ success: false, message: 'No print requests found' });
+  }
+
+  const request = users[username].printRequests.find(r => r.productId === productId);
+
+  if (!request) {
+    return res.status(404).json({ success: false, message: 'Print request not found' });
+  }
+
+  request.status = status;
+  request.processedDate = new Date().toISOString();
+
+  if (writeUsers(users)) {
+    res.json({ success: true, message: `Print request ${status}` });
+  } else {
+    res.status(500).json({ success: false, message: 'Failed to update print request' });
   }
 });
 

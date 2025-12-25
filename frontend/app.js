@@ -272,7 +272,7 @@ function buildConsumerUrl(productId) {
   return `${window.location.origin}/index.html?productId=${encodeURIComponent(productId)}`;
 }
 
-async function renderMyQrListForCurrentPage() {
+async function renderMyQrListForCurrentPage(searchProductId = null) {
   const container = document.getElementById("myQrList");
   if (!container) return;
 
@@ -306,6 +306,19 @@ async function renderMyQrListForCurrentPage() {
 
   productIds = [...new Set(productIds)]; // unique
 
+  // If searching for a specific product, filter to only that one
+  if (searchProductId) {
+    if (!productIds.includes(searchProductId)) {
+      container.innerHTML = "<p class='text-danger'>Product ID not found or you don't have access to it.</p>";
+      return;
+    }
+    productIds = [searchProductId];
+  } else if (page.endsWith("farmer.html") || page.endsWith("warehouse.html") || page.endsWith("retailer.html")) {
+    // For farmer, warehouse, and retailer pages, don't show anything until they search
+    container.innerHTML = "<p class='text-muted'>Enter a Product ID above to view its details and QR code.</p>";
+    return;
+  }
+
   if (productIds.length === 0) {
     container.innerHTML = "<p class='text-muted'>No products found yet.</p>";
     return;
@@ -319,47 +332,108 @@ async function renderMyQrListForCurrentPage() {
   const qrCanvasId = `myqr-${id}`;
   const historyDivId = `hist-${id}`;
 
+  // Check if user can see QR code
+  const canViewQR = session.role === 'Farmer' || session.role === 'Admin' ||
+                    session.printRequests?.find(r => r.productId === id && r.status === 'approved');
+
   const card = document.createElement("div");
   card.className = "card shadow-sm mb-3";
-  card.innerHTML = `
-    <div class="card-body p-3">
-      <div class="row g-3 align-items-start">
-        <div class="col-md-8">
-          <div><strong>Product ID:</strong> ${id}</div>
 
-          <div class="mt-1">
-            <strong>Verification link:</strong>
-            <a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>
+  if (canViewQR) {
+    // Show full card with QR code
+    card.innerHTML = `
+      <div class="card-body p-3">
+        <div class="row g-3 align-items-start">
+          <div class="col-md-8">
+            <div><strong>Product ID:</strong> ${id}</div>
+
+            <div class="mt-1">
+              <strong>Verification link:</strong>
+              <a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>
+            </div>
+
+            <div class="mt-3">
+              <strong>Updates:</strong>
+              <div id="${historyDivId}" class="product-timeline mt-2"></div>
+            </div>
           </div>
 
-          <div class="mt-3">
-            <strong>Updates:</strong>
-            <div id="${historyDivId}" class="product-timeline mt-2"></div>
+          <div class="col-md-4 text-center">
+            <canvas id="${qrCanvasId}"></canvas>
+            <div class="small text-muted mt-2">Scan to verify</div>
+
+            <button class="btn btn-secondary btn-sm mt-2 w-100" type="button">
+              Print QR
+            </button>
           </div>
-        </div>
-
-        <div class="col-md-4 text-center">
-          <canvas id="${qrCanvasId}"></canvas>
-          <div class="small text-muted mt-2">Scan to verify</div>
-
-          <button class="btn btn-secondary btn-sm mt-2 w-100" type="button">
-            Print QR
-          </button>
         </div>
       </div>
-    </div>
-  `;
+    `;
+  } else {
+    // Show card without QR code but with verification link
+    card.innerHTML = `
+      <div class="card-body p-3">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <div><strong>Product ID:</strong> ${id}</div>
+
+            <div class="mt-1">
+              <strong>Verification link:</strong>
+              <a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>
+            </div>
+
+            <div class="mt-3">
+              <strong>Updates:</strong>
+              <div id="${historyDivId}" class="product-timeline mt-2"></div>
+            </div>
+          </div>
+
+          <div class="col-md-4 text-center d-flex flex-column justify-content-center">
+            <div class="border rounded p-4 mb-3 bg-light">
+              <i class="text-muted">🔒</i>
+              <div class="small text-muted mt-2">QR code hidden</div>
+              <div class="small text-muted">Request approval to print</div>
+            </div>
+
+            <button class="btn btn-secondary btn-sm w-100" type="button">
+              Request to Print
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   container.appendChild(card);
 
-  // Draw QR
-  if (window.QRCode?.toCanvas) {
+  // Draw QR only if user can view it
+  if (canViewQR && window.QRCode?.toCanvas) {
     const canvas = document.getElementById(qrCanvasId);
     await QRCode.toCanvas(canvas, url, { width: 140, margin: 1 });
   }
 
-  // Print button
+  // Print button - check if user has permission for this specific product
   const btn = card.querySelector("button.btn.btn-secondary");
-  if (btn) btn.addEventListener("click", () => printQrCanvas(qrCanvasId, `QR Code - ${id}`));
+  if (btn) {
+    if (canViewQR) {
+      // User has permission - show print button
+      btn.addEventListener("click", () => printQrCanvas(qrCanvasId, `QR Code - ${id}`));
+    } else {
+      // User doesn't have permission - check request status
+      const printRequest = session.printRequests?.find(r => r.productId === id);
+
+      if (printRequest && printRequest.status === 'pending') {
+        // Request pending
+        btn.outerHTML = '<div class="alert alert-info small mb-0 mt-2 text-center">⏳ Request pending approval</div>';
+      } else if (printRequest && printRequest.status === 'denied') {
+        // Request denied
+        btn.outerHTML = '<div class="alert alert-danger small mb-0 mt-2 text-center">❌ Request denied<br><button class="btn btn-outline-secondary btn-sm mt-2 w-100" onclick="requestPrintPermission(\'' + id + '\')">Request Again</button></div>';
+      } else {
+        // No request yet - allow user to request
+        btn.addEventListener("click", () => requestPrintPermission(id));
+      }
+    }
+  }
 
   // Load and render full history inline
   const histEl = document.getElementById(historyDivId);
@@ -371,8 +445,60 @@ async function renderMyQrListForCurrentPage() {
       continue;
     }
 
+    // Get producer information
+    let producer = "";
+    try {
+      producer = await contract.getProducer(id);
+    } catch (e) {
+      console.warn("Could not fetch producer for", id);
+    }
+
+    // Try to find product creation details from ProductCreated events
+    let productName = "";
+    let productOrigin = "";
+    let harvestDate = "";
+
+    const productCreatedEvents = createdEvents.filter(e => e.args?.productId === id);
+    if (productCreatedEvents.length > 0) {
+      const createEvent = productCreatedEvents[0];
+      // Try to get transaction details to extract name and origin
+      try {
+        const tx = await createEvent.getTransaction();
+        if (tx && tx.data) {
+          // Decode the transaction data to get the parameters
+          const iface = new window.ethers.utils.Interface(contractABI);
+          const decoded = iface.parseTransaction({ data: tx.data });
+          if (decoded && decoded.args) {
+            productName = decoded.args.name || "";
+            productOrigin = decoded.args.origin || "";
+            harvestDate = decoded.args.date || "";
+          }
+        }
+      } catch (e) {
+        console.warn("Could not decode transaction data for product creation", e);
+      }
+    }
+
+    // Build timeline HTML with product header
+    let html = "<div class='mb-3'>";
+    html += `<div class='fw-bold mb-2'>Product: ${id}</div>`;
+    if (productName) html += `<div class='small'><strong>Name:</strong> ${productName}</div>`;
+    if (productOrigin) html += `<div class='small'><strong>Origin:</strong> ${productOrigin}</div>`;
+    if (producer) {
+      const isVerified = await isVerifiedProducer(producer);
+      html += `<div class='small'><strong>Producer:</strong> ${producer}${isVerified ? getVerifiedBadgeHtml() : ''}</div>`;
+    }
+    if (harvestDate) {
+      const formattedHarvestDate = (typeof formatDateString === "function")
+        ? (formatDateString(harvestDate) || harvestDate)
+        : harvestDate;
+      html += `<div class='small'><strong>Harvest Date:</strong> ${formattedHarvestDate}</div>`;
+    }
+    html += "</div>";
+
+    html += "<div class='border-top pt-2 mt-2'><strong>Timeline:</strong><br><br>";
+
     // Oldest -> newest
-    let html = "";
     for (const h of history) {
       const formattedDate = (typeof formatDateString === "function")
         ? (formatDateString(h.date) || h.date)
@@ -384,6 +510,7 @@ async function renderMyQrListForCurrentPage() {
       html += `• <strong>${h.participant}</strong> → ${h.eventType}<br>
                <span class="text-muted small">(${formattedDate} at ${time})</span><br><br>`;
     }
+    html += "</div>";
     histEl.innerHTML = html;
   } catch (e) {
     console.error("Failed to load history for", id, e);
@@ -393,6 +520,81 @@ async function renderMyQrListForCurrentPage() {
 
 }
 
+// Search for a specific product on the farmer page
+async function searchMyProduct() {
+  const searchInput = document.getElementById("searchProductId");
+  if (!searchInput) return;
+
+  const productId = searchInput.value.trim();
+  if (!productId) {
+    alert("⚠️ Please enter a Product ID to search.");
+    return;
+  }
+
+  await renderMyQrListForCurrentPage(productId);
+}
+
+// Request print permission for a specific product
+async function requestPrintPermission(productId) {
+  const session = getCurrentUser();
+  if (!session || !session.username) {
+    alert("⚠️ You must be logged in to request print permission.");
+    return;
+  }
+
+  // Ask for optional message
+  const message = prompt(`Request permission to print QR code for product ${productId}\n\nOptional: Enter a message explaining why you need access (or leave blank):`);
+
+  // If user clicked Cancel, don't proceed
+  if (message === null) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/print-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: session.username,
+        productId: productId,
+        message: message.trim()
+      })
+    });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("✅ Print request submitted successfully!\n\nAn administrator will review your request.");
+
+        // Update session with new or updated request
+        if (!session.printRequests) session.printRequests = [];
+
+        // Find existing request and update it, or add new one
+        const existingRequest = session.printRequests.find(r => r.productId === productId);
+        if (existingRequest) {
+          existingRequest.status = 'pending';
+          existingRequest.requestDate = new Date().toISOString();
+          delete existingRequest.processedDate;
+        } else {
+          session.printRequests.push({
+            productId,
+            status: 'pending',
+            requestDate: new Date().toISOString()
+          });
+        }
+
+        saveSession(session);
+
+        // Refresh the display
+        await searchMyProduct();
+    } else {
+      alert(`❌ ${data.message}`);
+    }
+  } catch (err) {
+    console.error("Error requesting print permission:", err);
+    alert("❌ Failed to submit print request. Please try again.");
+  }
+}
 
 // ADDED FOR ROLE-BASED ACCESS
 function checkRole(allowedRoles) {
@@ -547,16 +749,80 @@ async function adminGetHistory() {
   try {
     const contract = await getContract();
     const history = await contract.getHistory(id);
-    let text = "";
-    history.forEach((h) => {
-      const formattedDate = formatDateString(h.date) || h.date;
-      const timestamp = new Date(h.timestamp * 1000); // Convert Unix timestamp (seconds) to milliseconds
-      const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      text += `[Product ${id}] ${h.participant} → ${h.eventType} on ${formattedDate} at ${time}\n`;
-    });
 
-    outputEl.textContent = text || "No history found for this ID.";
-    outputEl.style.display = "block"; // Show the results
+    if (history && history.length > 0) {
+      // Get producer information
+      let producer = "";
+      try {
+        producer = await contract.getProducer(id);
+      } catch (e) {
+        console.warn("Could not fetch producer for", id);
+      }
+
+      // Read blockchain events to get product details
+      const createdEvents = await contract.queryFilter("ProductCreated", 0, "latest");
+
+      // Try to find product creation details from ProductCreated events
+      let productName = "";
+      let productOrigin = "";
+      let harvestDate = "";
+
+      const productCreatedEvents = createdEvents.filter(e => e.args?.productId === id);
+      if (productCreatedEvents.length > 0) {
+        const createEvent = productCreatedEvents[0];
+        // Try to get transaction details to extract name and origin
+        try {
+          const tx = await createEvent.getTransaction();
+          if (tx && tx.data) {
+            // Decode the transaction data to get the parameters
+            const iface = new window.ethers.utils.Interface(contractABI);
+            const decoded = iface.parseTransaction({ data: tx.data });
+            if (decoded && decoded.args) {
+              productName = decoded.args.name || "";
+              productOrigin = decoded.args.origin || "";
+              harvestDate = decoded.args.date || "";
+            }
+          }
+        } catch (e) {
+          console.warn("Could not decode transaction data for product creation", e);
+        }
+      }
+
+      // Build HTML with product header
+      let html = "<div class='mb-3'>";
+      html += `<div class='fw-bold mb-2' style='font-size: 1.1rem;'>Product: ${id}</div>`;
+      if (productName) html += `<div class='mb-1'><strong>Name:</strong> ${productName}</div>`;
+      if (productOrigin) html += `<div class='mb-1'><strong>Origin:</strong> ${productOrigin}</div>`;
+      if (producer) {
+        const isVerified = await isVerifiedProducer(producer);
+        html += `<div class='mb-1'><strong>Producer:</strong> ${producer}${isVerified ? getVerifiedBadgeHtml() : ''}</div>`;
+      }
+      if (harvestDate) {
+        const formattedHarvestDate = (typeof formatDateString === "function")
+          ? (formatDateString(harvestDate) || harvestDate)
+          : harvestDate;
+        html += `<div class='mb-1'><strong>Harvest Date:</strong> ${formattedHarvestDate}</div>`;
+      }
+      html += "</div>";
+
+      html += "<div class='border-top pt-3 mt-3'><strong>Product Journey:</strong><br><br>";
+
+      // Display timeline
+      history.forEach((h) => {
+        const formattedDate = formatDateString(h.date) || h.date;
+        const timestamp = new Date(h.timestamp * 1000);
+        const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        html += `• <strong>${h.participant}</strong> → ${h.eventType}<br>
+                 <span class="text-muted small">(${formattedDate} at ${time})</span><br><br>`;
+      });
+      html += "</div>";
+
+      outputEl.innerHTML = html;
+      outputEl.style.display = "block"; // Show the results
+    } else {
+      outputEl.innerHTML = "No history found for this ID.";
+      outputEl.style.display = "block";
+    }
   } catch (err) {
     console.error("❌ Error fetching admin history:", err);
     alert("❌ Unable to load history for admin view.");
@@ -585,17 +851,75 @@ async function publicGetHistory() {
     const history = await contract.getHistory(id);
 
     if (history && history.length > 0) {
-      let text = "";
+      // Get producer information
+      let producer = "";
+      try {
+        producer = await contract.getProducer(id);
+      } catch (e) {
+        console.warn("Could not fetch producer for", id);
+      }
+
+      // Read blockchain events to get product details
+      const createdEvents = await contract.queryFilter("ProductCreated", 0, "latest");
+
+      // Try to find product creation details from ProductCreated events
+      let productName = "";
+      let productOrigin = "";
+      let harvestDate = "";
+
+      const productCreatedEvents = createdEvents.filter(e => e.args?.productId === id);
+      if (productCreatedEvents.length > 0) {
+        const createEvent = productCreatedEvents[0];
+        // Try to get transaction details to extract name and origin
+        try {
+          const tx = await createEvent.getTransaction();
+          if (tx && tx.data) {
+            // Decode the transaction data to get the parameters
+            const iface = new window.ethers.utils.Interface(contractABI);
+            const decoded = iface.parseTransaction({ data: tx.data });
+            if (decoded && decoded.args) {
+              productName = decoded.args.name || "";
+              productOrigin = decoded.args.origin || "";
+              harvestDate = decoded.args.date || "";
+            }
+          }
+        } catch (e) {
+          console.warn("Could not decode transaction data for product creation", e);
+        }
+      }
+
+      // Build HTML with product header
+      let html = "<div class='mb-3'>";
+      html += `<div class='fw-bold mb-2' style='font-size: 1.1rem;'>Product: ${id}</div>`;
+      if (productName) html += `<div class='mb-1'><strong>Name:</strong> ${productName}</div>`;
+      if (productOrigin) html += `<div class='mb-1'><strong>Origin:</strong> ${productOrigin}</div>`;
+      if (producer) {
+        const isVerified = await isVerifiedProducer(producer);
+        html += `<div class='mb-1'><strong>Producer:</strong> ${producer}${isVerified ? getVerifiedBadgeHtml() : ''}</div>`;
+      }
+      if (harvestDate) {
+        const formattedHarvestDate = (typeof formatDateString === "function")
+          ? (formatDateString(harvestDate) || harvestDate)
+          : harvestDate;
+        html += `<div class='mb-1'><strong>Harvest Date:</strong> ${formattedHarvestDate}</div>`;
+      }
+      html += "</div>";
+
+      html += "<div class='border-top pt-3 mt-3'><strong>Product Journey:</strong><br><br>";
+
+      // Display timeline
       history.forEach((h) => {
         const formattedDate = formatDateString(h.date) || h.date;
-        const timestamp = new Date(h.timestamp * 1000); // Convert Unix timestamp (seconds) to milliseconds
+        const timestamp = new Date(h.timestamp * 1000);
         const time = timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        text += `[Product ${id}] ${h.participant} → ${h.eventType} on ${formattedDate} at ${time}\n`;
+        html += `• <strong>${h.participant}</strong> → ${h.eventType}<br>
+                 <span class="text-muted small">(${formattedDate} at ${time})</span><br><br>`;
       });
-      outputEl.textContent = text;
+      html += "</div>";
+
+      outputEl.innerHTML = html;
       if (resultsSection) resultsSection.style.display = "block";
     } else {
-      outputEl.textContent = "No history found for this ID.";
       if (invalidProduct) invalidProduct.style.display = "block";
     }
   } catch (err) {
@@ -786,6 +1110,23 @@ async function getUserDirectory() {
   }
 }
 
+// Helper to check if a username is a verified producer (approved farmer)
+async function isVerifiedProducer(username) {
+  try {
+    const users = await getUserDirectory();
+    const user = users[username];
+    return user && user.role === 'Farmer' && user.approved === true;
+  } catch (err) {
+    console.error("Error checking verified status:", err);
+    return false;
+  }
+}
+
+// Helper to get verified badge HTML
+function getVerifiedBadgeHtml() {
+  return '<span class="verified-producer-badge ms-1">🇱🇻 Verified</span>';
+}
+
 async function registerUser(username, password, role) {
   if (!username || !password || !role) {
     return { success: false, message: "All fields are required." };
@@ -894,7 +1235,7 @@ async function populateUserTable() {
 
   if (entries.length === 0) {
     const emptyRow = document.createElement("tr");
-    emptyRow.innerHTML = '<td colspan="4" class="text-center text-muted">No approved users</td>';
+    emptyRow.innerHTML = '<td colspan="5" class="text-center text-muted">No approved users</td>';
     tableBody.appendChild(emptyRow);
     return;
   }
@@ -911,6 +1252,15 @@ async function populateUserTable() {
     const roleTd = document.createElement("td");
     roleTd.textContent = info.role;
     tr.appendChild(roleTd);
+
+    // Verified Producer column
+    const verifiedTd = document.createElement("td");
+    if (info.role === 'Farmer' && info.approved) {
+      verifiedTd.innerHTML = '<span class="verified-producer-badge">🇱🇻 Latvian Verified</span>';
+    } else {
+      verifiedTd.innerHTML = '<span class="text-muted small">—</span>';
+    }
+    tr.appendChild(verifiedTd);
 
     // Update Role column with dropdown
     const updateRoleTd = document.createElement("td");
@@ -1160,6 +1510,202 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+
+async function populatePrintRequestTable() {
+  const tableBody = document.querySelector("#printRequestTable tbody");
+  if (!tableBody) return;
+
+  tableBody.innerHTML = "";
+
+  try {
+    const response = await fetch(`${API_BASE}/api/print-requests/all`);
+    const data = await response.json();
+
+    if (!data.success || data.requests.length === 0) {
+      const emptyRow = document.createElement("tr");
+      emptyRow.innerHTML = '<td colspan="7" class="text-center text-muted">No print requests</td>';
+      tableBody.appendChild(emptyRow);
+      return;
+    }
+
+    data.requests.forEach(request => {
+      const tr = document.createElement("tr");
+
+      // Username
+      const usernameTd = document.createElement("td");
+      usernameTd.textContent = request.username;
+      tr.appendChild(usernameTd);
+
+      // Role
+      const roleTd = document.createElement("td");
+      roleTd.textContent = request.role === "WarehouseWorker" ? "Warehouse Worker" : request.role;
+      tr.appendChild(roleTd);
+
+      // Product ID
+      const productTd = document.createElement("td");
+      productTd.textContent = request.productId;
+      tr.appendChild(productTd);
+
+      // Message
+      const messageTd = document.createElement("td");
+      messageTd.textContent = request.message || '(no message)';
+      messageTd.className = request.message ? '' : 'text-muted fst-italic';
+      tr.appendChild(messageTd);
+
+      // Status
+      const statusTd = document.createElement("td");
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `badge ${
+        request.status === 'approved' ? 'bg-success' :
+        request.status === 'denied' ? 'bg-danger' :
+        'bg-warning text-dark'
+      }`;
+      statusBadge.textContent = request.status.charAt(0).toUpperCase() + request.status.slice(1);
+      statusTd.appendChild(statusBadge);
+      tr.appendChild(statusTd);
+
+      // Request Date
+      const dateTd = document.createElement("td");
+      const date = new Date(request.requestDate);
+      dateTd.textContent = date.toLocaleString();
+      tr.appendChild(dateTd);
+
+      // Actions
+      const actionsTd = document.createElement("td");
+
+      if (request.status === 'pending') {
+        // Pending: Show Approve and Deny buttons
+        const approveBtn = document.createElement("button");
+        approveBtn.className = "btn btn-sm btn-success me-2";
+        approveBtn.textContent = "Approve";
+        approveBtn.addEventListener("click", async () => {
+          try {
+            const response = await fetch(`${API_BASE}/api/print-request`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: request.username,
+                productId: request.productId,
+                status: 'approved'
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+              alert(`✅ Print request approved for ${request.username} - ${request.productId}`);
+              populatePrintRequestTable();
+            } else {
+              alert(`Failed to approve request: ${data.message}`);
+            }
+          } catch (err) {
+            console.error("Error approving print request:", err);
+            alert("Failed to approve request. Please try again.");
+          }
+        });
+
+        const denyBtn = document.createElement("button");
+        denyBtn.className = "btn btn-sm btn-danger";
+        denyBtn.textContent = "Deny";
+        denyBtn.addEventListener("click", async () => {
+          if (confirm(`Deny print request for ${request.username} - ${request.productId}?`)) {
+            try {
+              const response = await fetch(`${API_BASE}/api/print-request`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: request.username,
+                  productId: request.productId,
+                  status: 'denied'
+                })
+              });
+              const data = await response.json();
+              if (data.success) {
+                alert(`❌ Print request denied for ${request.username} - ${request.productId}`);
+                populatePrintRequestTable();
+              } else {
+                alert(`Failed to deny request: ${data.message}`);
+              }
+            } catch (err) {
+              console.error("Error denying print request:", err);
+              alert("Failed to deny request. Please try again.");
+            }
+          }
+        });
+
+        actionsTd.appendChild(approveBtn);
+        actionsTd.appendChild(denyBtn);
+      } else if (request.status === 'approved') {
+        // Approved: Show Revoke button
+        const revokeBtn = document.createElement("button");
+        revokeBtn.className = "btn btn-sm btn-warning";
+        revokeBtn.textContent = "Revoke";
+        revokeBtn.addEventListener("click", async () => {
+          if (confirm(`Revoke print permission for ${request.username} - ${request.productId}?\n\nThis will prevent them from printing the QR code.`)) {
+            try {
+              const response = await fetch(`${API_BASE}/api/print-request`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: request.username,
+                  productId: request.productId,
+                  status: 'denied'
+                })
+              });
+              const data = await response.json();
+              if (data.success) {
+                alert(`🔒 Print permission revoked for ${request.username} - ${request.productId}`);
+                populatePrintRequestTable();
+              } else {
+                alert(`Failed to revoke permission: ${data.message}`);
+              }
+            } catch (err) {
+              console.error("Error revoking permission:", err);
+              alert("Failed to revoke permission. Please try again.");
+            }
+          }
+        });
+        actionsTd.appendChild(revokeBtn);
+      } else if (request.status === 'denied') {
+        // Denied: Show Approve button
+        const approveBtn = document.createElement("button");
+        approveBtn.className = "btn btn-sm btn-success";
+        approveBtn.textContent = "Approve";
+        approveBtn.addEventListener("click", async () => {
+          try {
+            const response = await fetch(`${API_BASE}/api/print-request`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: request.username,
+                productId: request.productId,
+                status: 'approved'
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+              alert(`✅ Print request approved for ${request.username} - ${request.productId}`);
+              populatePrintRequestTable();
+            } else {
+              alert(`Failed to approve request: ${data.message}`);
+            }
+          } catch (err) {
+            console.error("Error approving request:", err);
+            alert("Failed to approve request. Please try again.");
+          }
+        });
+        actionsTd.appendChild(approveBtn);
+      }
+
+      tr.appendChild(actionsTd);
+
+      tableBody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error("Error loading print requests:", err);
+    const errorRow = document.createElement("tr");
+    errorRow.innerHTML = '<td colspan="7" class="text-center text-danger">Failed to load print requests</td>';
+    tableBody.appendChild(errorRow);
+  }
+}
 
 function printQrCanvas(canvasId, title = "Product QR Code") {
   const canvas = document.getElementById(canvasId);

@@ -425,3 +425,43 @@ footer {
 html {
   scroll-behavior: smooth;
 }
+
+/* Verified Producer Badge */
+.verified-producer-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  background: linear-gradient(135deg, #198754 0%, #157347 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(25, 135, 84, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+}
+
+.verified-producer-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.35);
+}
+
+/* Verified badge in navbar */
+.navbar .verified-producer-badge {
+  font-size: 0.7rem;
+  padding: 0.3rem 0.65rem;
+}
+
+/* Verified badge in tables */
+.table .verified-producer-badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.6rem;
+}
+
+/* Verified badge in product timeline */
+.product-timeline .verified-producer-badge {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  margin-left: 0.25rem;
+}
