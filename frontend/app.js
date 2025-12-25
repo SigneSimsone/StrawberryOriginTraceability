@@ -1124,7 +1124,7 @@ async function isVerifiedProducer(username) {
 
 // Helper to get verified badge HTML
 function getVerifiedBadgeHtml() {
-  return '<span class="verified-producer-badge ms-1">🇱🇻 Verified</span>';
+  return '<img src="verified-badge.png" alt="Latvian Verified Producer" class="verified-producer-badge ms-1">';
 }
 
 async function registerUser(username, password, role) {
@@ -1256,7 +1256,7 @@ async function populateUserTable() {
     // Verified Producer column
     const verifiedTd = document.createElement("td");
     if (info.role === 'Farmer' && info.approved) {
-      verifiedTd.innerHTML = '<span class="verified-producer-badge">🇱🇻 Latvian Verified</span>';
+      verifiedTd.innerHTML = '<img src="verified-badge.png" alt="Latvian Verified" class="verified-producer-badge">';
     } else {
       verifiedTd.innerHTML = '<span class="text-muted small">—</span>';
     }
